@@ -20,6 +20,11 @@
 using namespace muduo;
 using namespace muduo::net;
 
+/**
+ * 默认连接成功回调函数
+ *
+ * 打印trace级别的日志，内容为连接信息
+ */
 void muduo::net::defaultConnectionCallback(const TcpConnectionPtr& conn)
 {
   LOG_TRACE << conn->localAddress().toIpPort() << " -> "
@@ -28,6 +33,11 @@ void muduo::net::defaultConnectionCallback(const TcpConnectionPtr& conn)
   // do not call conn->forceClose(), because some users want to register message callback only.
 }
 
+/**
+ * 默认收到消息回调函数
+ *
+ * 读取所有信息
+ */
 void muduo::net::defaultMessageCallback(const TcpConnectionPtr&,
                                         Buffer* buf,
                                         Timestamp)
@@ -35,6 +45,13 @@ void muduo::net::defaultMessageCallback(const TcpConnectionPtr&,
   buf->retrieveAll();
 }
 
+/**
+ * 构造函数
+ *
+ * 首先构造初始化本连接的属性
+ * 然后对其channel设置读、写、关闭和出错处理函数
+ * 最后对其socket设置keepalive属性
+ */
 TcpConnection::TcpConnection(EventLoop* loop,
                              const string& nameArg,
                              int sockfd,
@@ -63,6 +80,11 @@ TcpConnection::TcpConnection(EventLoop* loop,
   socket_->setKeepAlive(true);
 }
 
+/**
+ * 析构函数
+ *
+ * 打印debug级别日志
+ */
 TcpConnection::~TcpConnection()
 {
   LOG_DEBUG << "TcpConnection::dtor[" <<  name_ << "] at " << this
@@ -71,11 +93,21 @@ TcpConnection::~TcpConnection()
   assert(state_ == kDisconnected);
 }
 
+/**
+ * 获取tcp信息
+ *
+ * 从自己的socket中获取
+ */
 bool TcpConnection::getTcpInfo(struct tcp_info* tcpi) const
 {
   return socket_->getTcpInfo(tcpi);
 }
 
+/**
+ * 获取字符串形式的tcp信息
+ *
+ * 从自己的socket中获取
+ */
 string TcpConnection::getTcpInfoString() const
 {
   char buf[1024];
@@ -84,11 +116,23 @@ string TcpConnection::getTcpInfoString() const
   return buf;
 }
 
+/**
+ * 发送数据
+ *
+ * 将指针和长度封装成StringPiece之后调用send重载
+ */
 void TcpConnection::send(const void* data, int len)
 {
   send(StringPiece(static_cast<const char*>(data), len));
 }
 
+/**
+ * 发送数据
+ *
+ * 首先判断是否已经连接，如果不是直接返回
+ * 然后判断是否在其所在loop的线程中，如果是调用sendInLoop发送数据
+ * 如果不是将sendInLoop发送到loop的线程的函数队列中去执行
+ */
 void TcpConnection::send(const StringPiece& message)
 {
   if (state_ == kConnected)
@@ -110,6 +154,13 @@ void TcpConnection::send(const StringPiece& message)
 }
 
 // FIXME efficiency!!!
+/**
+ * 发送数据
+ *
+ * 首先判断是否已经连接，如果不是直接返回
+ * 然后判断是否在其所在loop的线程中，如果是调用sendInLoop发送所有可读数据，将buffer置空
+ * 如果不是将buffer中可读数据提取成字符串，将buffer置空，在将sendInLoop发送到loop的线程的函数队列中去执行
+ */
 void TcpConnection::send(Buffer* buf)
 {
   if (state_ == kConnected)
@@ -131,11 +182,30 @@ void TcpConnection::send(Buffer* buf)
   }
 }
 
+/**
+ * 在loop中发送数据
+ *
+ * 将StringPiece转换成指针和长度调用重载
+ */
 void TcpConnection::sendInLoop(const StringPiece& message)
 {
   sendInLoop(message.data(), message.size());
 }
 
+/**
+ * 在loop中发送数据
+ *
+ * 首先判断连接状态是否是断开，如果是直接返回
+ * 然后判断是否channel没有开启写事件，并且输出buffer为空，如果是进行如下操作：
+ * 首先调用尝试直接写到fd中，看看其返回值，如果大于等于0，说明写成功了，否则说明写失败了
+ * 写成功的话判断是否完全写进去了，如果是则调用写完成回调函数
+ * 写失败的话判断错误码是否是EWOULDBLOCK，如果是则忽略，然后判断错误是否是EPIPE或者ECONNRESET，如果是则认为是fault错误
+ *
+ * 如果不是fault错误，说明还要继续发送数据，如果是则直接返回
+ * 判断将本次剩下要写的加入输出buffer是否到达高水位，如果到达则将高水位回调添加到调用队列中
+ * 然后将剩下要写的加入输出buffer
+ * 最后判断channel是否开启写事件，如果没有则开启其写事件
+ */
 void TcpConnection::sendInLoop(const void* data, size_t len)
 {
   loop_->assertInLoopThread();
@@ -191,6 +261,13 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
   }
 }
 
+/**
+ * shutdown函数
+ *
+ * 判断是否处于连接状态，如果不是直接返回
+ * 将状态设置为断开中
+ * 然后在loop线程中调用shutdownInLoop
+ */
 void TcpConnection::shutdown()
 {
   // FIXME: use compare and swap
@@ -202,6 +279,12 @@ void TcpConnection::shutdown()
   }
 }
 
+/**
+ * 在loop线程中的shuntdown函数
+ *
+ * 判断是否channel开启写事件，如果开启了则返回
+ * 如果没有开启则调用socket的shuntdownWrite
+ */
 void TcpConnection::shutdownInLoop()
 {
   loop_->assertInLoopThread();

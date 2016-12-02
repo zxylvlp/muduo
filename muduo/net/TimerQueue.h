@@ -32,6 +32,9 @@ class TimerId;
 /// A best efforts timer queue.
 /// No guarantee that the callback will be on time.
 ///
+/**
+ * 计时器队列
+ */
 class TimerQueue : noncopyable
 {
  public:
@@ -57,9 +60,21 @@ class TimerQueue : noncopyable
  private:
 
   // FIXME: use unique_ptr<Timer> instead of raw pointers.
+  /**
+   * 定义时间戳和定制器指针对为元素类型
+   */
   typedef std::pair<Timestamp, Timer*> Entry;
+  /**
+   * 定义元素集合为定时器列表类型
+   */
   typedef std::set<Entry> TimerList;
+  /**
+   * 定义定时器指针和序列号对为活跃定时器类型
+   */
   typedef std::pair<Timer*, int64_t> ActiveTimer;
+  /**
+   * 定义活跃定时器集合为活跃定时器结合类型
+   */
   typedef std::set<ActiveTimer> ActiveTimerSet;
 
   void addTimerInLoop(Timer* timer);
@@ -72,15 +87,36 @@ class TimerQueue : noncopyable
 
   bool insert(Timer* timer);
 
+  /**
+   * 指向事件循环的指针
+   */
   EventLoop* loop_;
+  /**
+   * 定时器文件描述符
+   */
   const int timerfd_;
+  /**
+   * 定时器文件描述符通道
+   */
   Channel timerfdChannel_;
   // Timer list sorted by expiration
+  /**
+   * 定时器列表
+   */
   TimerList timers_;
 
   // for cancel()
+  /**
+   * 活跃的定时器集合
+   */
   ActiveTimerSet activeTimers_;
+  /**
+   * 正在调用到期的计时器的回调
+   */
   bool callingExpiredTimers_; /* atomic */
+  /**
+   * 正在取消的定时器集合
+   */
   ActiveTimerSet cancelingTimers_;
 };
 

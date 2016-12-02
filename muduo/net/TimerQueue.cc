@@ -26,6 +26,11 @@ namespace net
 namespace detail
 {
 
+/**
+ * 创建计时器文件描述符
+ *
+ * 创建计时器文件描述符并返回
+ */
 int createTimerfd()
 {
   int timerfd = ::timerfd_create(CLOCK_MONOTONIC,
@@ -37,6 +42,11 @@ int createTimerfd()
   return timerfd;
 }
 
+/**
+ * 获得从现在到when需要经过多少秒和纳秒
+ *
+ * 首先算出when和现在相差多少微妙，然后将其换算成秒和纳秒
+ */
 struct timespec howMuchTimeFromNow(Timestamp when)
 {
   int64_t microseconds = when.microSecondsSinceEpoch()
@@ -53,6 +63,11 @@ struct timespec howMuchTimeFromNow(Timestamp when)
   return ts;
 }
 
+/**
+ * 读取定时器文件描述符
+ *
+ * 从定时器文件描述符中读取8个字节
+ */
 void readTimerfd(int timerfd, Timestamp now)
 {
   uint64_t howmany;
@@ -64,6 +79,11 @@ void readTimerfd(int timerfd, Timestamp now)
   }
 }
 
+/**
+ * 重置定时器文件描述符
+ *
+ * 计算从现在到过期时间的时间长度，然后将其设置到定时器文件描述符的间隔时间中
+ */
 void resetTimerfd(int timerfd, Timestamp expiration)
 {
   // wake up loop by timerfd_settime()
@@ -87,6 +107,11 @@ using namespace muduo;
 using namespace muduo::net;
 using namespace muduo::net::detail;
 
+/**
+ * 构造函数
+ *
+ * 设置计时器描述符通道的可读回调，并且允许其读事件
+ */
 TimerQueue::TimerQueue(EventLoop* loop)
   : loop_(loop),
     timerfd_(createTimerfd()),
@@ -100,6 +125,14 @@ TimerQueue::TimerQueue(EventLoop* loop)
   timerfdChannel_.enableReading();
 }
 
+/**
+ * 析构函数
+ *
+ * 首先设置定时器描述符通道关闭所有事件
+ * 然后将定时器描述符通道删除，即将定时器描述符从事件循环中删去
+ * 然后关闭定时器描述符
+ * 最后将定时器列表中的所有定时器析构
+ */
 TimerQueue::~TimerQueue()
 {
   timerfdChannel_.disableAll();
@@ -113,6 +146,12 @@ TimerQueue::~TimerQueue()
   }
 }
 
+/**
+ * 添加定时器
+ *
+ * 首先创建一个定时器，然后在loop_的线程中添加此定时器
+ * 最后返回创建的定时器和其序列号
+ */
 TimerId TimerQueue::addTimer(const TimerCallback& cb,
                              Timestamp when,
                              double interval)
@@ -135,12 +174,23 @@ TimerId TimerQueue::addTimer(TimerCallback&& cb,
 }
 #endif
 
+/**
+ * 取消定时器
+ *
+ * 在loop_所在的线程中取消定时器
+ */
 void TimerQueue::cancel(TimerId timerId)
 {
   loop_->runInLoop(
       std::bind(&TimerQueue::cancelInLoop, this, timerId));
 }
 
+/**
+ * 在loop线程中添加定时器
+ *
+ * 首先将定时器加入定时器列表中，并查看其是否排在最前面
+ * 如果排在最前面则更改定时器描述符的过期时间
+ */
 void TimerQueue::addTimerInLoop(Timer* timer)
 {
   loop_->assertInLoopThread();
@@ -152,6 +202,14 @@ void TimerQueue::addTimerInLoop(Timer* timer)
   }
 }
 
+/**
+ * 在loop线程中取消定时器
+ *
+ * 首先利用定时器创建一个活跃定时器
+ * 然后从活跃定时器集合中查找这个活跃定时器
+ * 如果能找到则将定时器从定时器列表和活跃定时器集合中删除并且析构定时器
+ * 如果找不到但是正在调用过期的定时器的回调则将活跃定时器插入正在取消的定时器集合中
+ */
 void TimerQueue::cancelInLoop(TimerId timerId)
 {
   loop_->assertInLoopThread();

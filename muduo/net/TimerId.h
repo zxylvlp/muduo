@@ -23,15 +23,24 @@ class Timer;
 ///
 /// An opaque identifier, for canceling Timer.
 ///
+/**
+ * 定时器id类
+ */
 class TimerId : public muduo::copyable
 {
  public:
+  /**
+   * 构造函数
+   */
   TimerId()
     : timer_(NULL),
       sequence_(0)
   {
   }
 
+  /**
+   * 构造函数
+   */
   TimerId(Timer* timer, int64_t seq)
     : timer_(timer),
       sequence_(seq)
@@ -43,7 +52,13 @@ class TimerId : public muduo::copyable
   friend class TimerQueue;
 
  private:
+  /**
+   * 指向定时器的指针
+   */
   Timer* timer_;
+  /**
+   * 序列号
+   */
   int64_t sequence_;
 };
 

@@ -230,6 +230,17 @@ void TimerQueue::cancelInLoop(TimerId timerId)
   assert(timers_.size() == activeTimers_.size());
 }
 
+/**
+ * 处理读
+ *
+ * 首先从定时器描述符中读取数据
+ * 然后从活跃定时器集合和定时器列表中删除并返回过期的定时器
+ * 将正在调用到期的计时器的回调设置为真
+ * 清空正在取消的定时器集合
+ * 调用所有过期的定时器的回调函数
+ * 将正在调用到期的计时器的回调设置为假
+ * 最后将过期的定时器中需要重复回调的定时器重新加入活跃定时器集合和定时器列表
+ */
 void TimerQueue::handleRead()
 {
   loop_->assertInLoopThread();
@@ -251,6 +262,13 @@ void TimerQueue::handleRead()
   reset(expired, now);
 }
 
+/**
+ * 获取过期的定时器
+ *
+ * 首先在定时器列表中查找过期时间小于等于当前时间的定时器，将他们从中删除并放入一个数组中
+ * 然后将它们继续从活跃定时器集合中删除
+ * 最后返回这个数组
+ */
 std::vector<TimerQueue::Entry> TimerQueue::getExpired(Timestamp now)
 {
   assert(timers_.size() == activeTimers_.size());
@@ -273,6 +291,13 @@ std::vector<TimerQueue::Entry> TimerQueue::getExpired(Timestamp now)
   return expired;
 }
 
+/**
+ * 重置过期的定时器
+ *
+ * 遍历所有过期的定时器，如果它是重复回调的并且没在正在取消的定时器集合中时则将该定时器重启并且添加到定时器列表和活跃定时器集合中
+ * 否则将其析构
+ * 然后根据定时器列表中第一个的定时器的过期时间重置定时器描述符
+ */
 void TimerQueue::reset(const std::vector<Entry>& expired, Timestamp now)
 {
   Timestamp nextExpire;
@@ -305,6 +330,11 @@ void TimerQueue::reset(const std::vector<Entry>& expired, Timestamp now)
   }
 }
 
+/**
+ * 插入定时器
+ *
+ * 将定时器插入定时器列表和活跃定时器集合中并且返回定时器列表中第一个元素是否变化
+ */
 bool TimerQueue::insert(Timer* timer)
 {
   loop_->assertInLoopThread();

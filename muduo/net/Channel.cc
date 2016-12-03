@@ -17,10 +17,22 @@
 using namespace muduo;
 using namespace muduo::net;
 
+/**
+ * 没有事件
+ */
 const int Channel::kNoneEvent = 0;
+/**
+ * 读事件
+ */
 const int Channel::kReadEvent = POLLIN | POLLPRI;
+/**
+ * 写事件
+ */
 const int Channel::kWriteEvent = POLLOUT;
 
+/**
+ * 构造函数
+ */
 Channel::Channel(EventLoop* loop, int fd__)
   : loop_(loop),
     fd_(fd__),
@@ -34,6 +46,9 @@ Channel::Channel(EventLoop* loop, int fd__)
 {
 }
 
+/**
+ * 析构函数
+ */
 Channel::~Channel()
 {
   assert(!eventHandling_);
@@ -44,18 +59,33 @@ Channel::~Channel()
   }
 }
 
+/**
+ * 绑定到连接
+ */
 void Channel::tie(const std::shared_ptr<void>& obj)
 {
   tie_ = obj;
   tied_ = true;
 }
 
+/**
+ * 更新
+ *
+ * 将文件描述符是否加入事件循环设置为真
+ * 调用所在事件循环的更新通道函数
+ */
 void Channel::update()
 {
   addedToLoop_ = true;
   loop_->updateChannel(this);
 }
 
+/**
+ * 删除
+ *
+ * 将文件描述符是否加入事件循环设置为假
+ * 调用所在事件循环的删除通道函数
+ */
 void Channel::remove()
 {
   assert(isNoneEvent());
@@ -63,6 +93,12 @@ void Channel::remove()
   loop_->removeChannel(this);
 }
 
+/**
+ * 处理事件
+ *
+ * 如果绑定过对象，则将那个对象的引用计数加1后调用handleEventWithGuard实际处理事件
+ * 否则直接调用handleEventWithGuard实际处理事件
+ */
 void Channel::handleEvent(Timestamp receiveTime)
 {
   std::shared_ptr<void> guard;
@@ -80,6 +116,16 @@ void Channel::handleEvent(Timestamp receiveTime)
   }
 }
 
+/**
+ * 实际处理事件
+ *
+ * 首先将正在处理事件设置为真
+ * 判断是否是hup事件并且没有数据可读则调用关闭回调
+ * 判断是否是nval或者出错事件则调用出错回调
+ * 判断是否是可读事件如果是则调用可读回调
+ * 判断是否是可写事件如果是则调用可写回调
+ * 最后将正在处理事件设置为假
+ */
 void Channel::handleEventWithGuard(Timestamp receiveTime)
 {
   eventHandling_ = true;
@@ -113,16 +159,25 @@ void Channel::handleEventWithGuard(Timestamp receiveTime)
   eventHandling_ = false;
 }
 
+/**
+ * 将接受到的事件转换为字符串
+ */
 string Channel::reventsToString() const
 {
   return eventsToString(fd_, revents_);
 }
 
+/**
+ * 将允许接受的事件转化为字符串
+ */
 string Channel::eventsToString() const
 {
   return eventsToString(fd_, events_);
 }
 
+/**
+ * 将事件转换为字符串
+ */
 string Channel::eventsToString(int fd, int ev)
 {
   std::ostringstream oss;

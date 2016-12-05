@@ -35,9 +35,15 @@ class TimerQueue;
 /// Reactor, at most one per thread.
 ///
 /// This is an interface class, so don't expose too much details.
+/**
+ * 事件循环类
+ */
 class EventLoop : noncopyable
 {
  public:
+  /**
+   * 定义函数类型
+   */
   typedef std::function<void()> Functor;
 
   EventLoop();
@@ -59,8 +65,14 @@ class EventLoop : noncopyable
   ///
   /// Time when poll returns, usually means data arrival.
   ///
+  /**
+   * 返回轮询返回的时间
+   */
   Timestamp pollReturnTime() const { return pollReturnTime_; }
 
+  /**
+   * 返回循环次数
+   */
   int64_t iteration() const { return iteration_; }
 
   /// Runs callback immediately in the loop thread.
@@ -116,6 +128,12 @@ class EventLoop : noncopyable
   bool hasChannel(Channel* channel);
 
   // pid_t threadId() const { return threadId_; }
+  /**
+   * 断言位于循环线程
+   *
+   * 判断是否位于循环线程，如果是则直接返回
+   * 否则退出
+   */
   void assertInLoopThread()
   {
     if (!isInLoopThread())
@@ -123,16 +141,31 @@ class EventLoop : noncopyable
       abortNotInLoopThread();
     }
   }
+  /**
+   * 当前线程号是否等于本事件循环的线程号
+   */
   bool isInLoopThread() const { return threadId_ == CurrentThread::tid(); }
   // bool callingPendingFunctors() const { return callingPendingFunctors_; }
+  /**
+   * 返回是否正在处理事件
+   */
   bool eventHandling() const { return eventHandling_; }
 
+  /**
+   * 设置上下文
+   */
   void setContext(const boost::any& context)
   { context_ = context; }
 
+  /**
+   * 返回上下文
+   */
   const boost::any& getContext() const
   { return context_; }
 
+  /**
+   * 返回可变上下文
+   */
   boost::any* getMutableContext()
   { return &context_; }
 
@@ -145,28 +178,79 @@ class EventLoop : noncopyable
 
   void printActiveChannels() const; // DEBUG
 
+  /**
+   * 定义通道列表类型为指向通道指针的数组
+   */
   typedef std::vector<Channel*> ChannelList;
 
+  /**
+   * 是否正在循环
+   */
   bool looping_; /* atomic */
+  /**
+   * 是否已经标记退出
+   */
   bool quit_; /* atomic and shared between threads, okay on x86, I guess. */
+  /**
+   * 是否正在处理事件
+   */
   bool eventHandling_; /* atomic */
+  /**
+   * 是否正在调用等待的函数
+   */
   bool callingPendingFunctors_; /* atomic */
+  /**
+   * 循环次数
+   */
   int64_t iteration_;
+  /**
+   * 本事件循环的线程号
+   */
   const pid_t threadId_;
+  /**
+   * 轮询返回的时间
+   */
   Timestamp pollReturnTime_;
+  /**
+   * 指向轮询器的指针
+   */
   std::unique_ptr<Poller> poller_;
+  /**
+   * 指向计时器队列的指针
+   */
   std::unique_ptr<TimerQueue> timerQueue_;
+  /**
+   * 唤醒描述符
+   */
   int wakeupFd_;
   // unlike in TimerQueue, which is an internal class,
   // we don't expose Channel to client.
+  /**
+   * 指向唤醒描述符的通道的指针
+   */
   std::unique_ptr<Channel> wakeupChannel_;
+  /**
+   * 指向上下文的指针
+   */
   boost::any context_;
 
   // scratch variables
+  /**
+   * 活跃通道列表
+   */
   ChannelList activeChannels_;
+  /**
+   * 指向当前活跃通道的指针
+   */
   Channel* currentActiveChannel_;
 
+  /**
+   * 互斥锁
+   */
   mutable MutexLock mutex_;
+  /**
+   * 正在等待的函数数组
+   */
   std::vector<Functor> pendingFunctors_; // @GuardedBy mutex_
 };
 

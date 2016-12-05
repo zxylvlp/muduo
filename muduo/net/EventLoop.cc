@@ -25,10 +25,19 @@ using namespace muduo::net;
 
 namespace
 {
+/**
+ * 指向这个线程的事件循环的指针
+ */
 __thread EventLoop* t_loopInThisThread = 0;
 
+/**
+ * 设置轮询的超时时间为10秒
+ */
 const int kPollTimeMs = 10000;
 
+/**
+ * 创建事件描述符
+ */
 int createEventfd()
 {
   int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);

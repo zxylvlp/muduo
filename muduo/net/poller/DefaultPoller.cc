@@ -14,6 +14,11 @@
 
 using namespace muduo::net;
 
+/**
+ * 创建默认轮询器
+ *
+ * 根据环境参数选择是创建普通轮询器还是e轮询器
+ */
 Poller* Poller::newDefaultPoller(EventLoop* loop)
 {
   if (::getenv("MUDUO_USE_POLL"))

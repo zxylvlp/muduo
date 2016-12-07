@@ -25,6 +25,9 @@ namespace net
 ///
 /// IO Multiplexing with epoll(4).
 ///
+/**
+ * e轮询器类
+ */
 class EPollPoller : public Poller
 {
  public:
@@ -36,6 +39,9 @@ class EPollPoller : public Poller
   virtual void removeChannel(Channel* channel);
 
  private:
+  /**
+   * 初始事件列表大小
+   */
   static const int kInitEventListSize = 16;
 
   static const char* operationToString(int op);
@@ -44,9 +50,18 @@ class EPollPoller : public Poller
                           ChannelList* activeChannels) const;
   void update(int operation, Channel* channel);
 
+  /**
+   * 定义事件列表为事件的数组
+   */
   typedef std::vector<struct epoll_event> EventList;
 
+  /**
+   * e轮询器描述符
+   */
   int epollfd_;
+  /**
+   * 事件列表
+   */
   EventList events_;
 };
 

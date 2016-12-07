@@ -13,15 +13,26 @@
 using namespace muduo;
 using namespace muduo::net;
 
+/**
+ * 构造函数
+ */
 Poller::Poller(EventLoop* loop)
   : ownerLoop_(loop)
 {
 }
 
+/**
+ * 析构函数
+ */
 Poller::~Poller()
 {
 }
 
+/**
+ * 判断轮询器是否有通道
+ *
+ * 从通道映射中利用通道描述符查找
+ */
 bool Poller::hasChannel(Channel* channel) const
 {
   assertInLoopThread();

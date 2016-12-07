@@ -28,9 +28,15 @@ class Channel;
 /// Base class for IO Multiplexing
 ///
 /// This class doesn't own the Channel objects.
+/**
+ * 轮询器类
+ */
 class Poller : noncopyable
 {
  public:
+  /**
+   * 定义通道列表类
+   */
   typedef std::vector<Channel*> ChannelList;
 
   Poller(EventLoop* loop);
@@ -52,16 +58,30 @@ class Poller : noncopyable
 
   static Poller* newDefaultPoller(EventLoop* loop);
 
+  /**
+   * 断言当前在循环线程
+   *
+   * 调用所属事件循环的断言当前在循环线程
+   */
   void assertInLoopThread() const
   {
     ownerLoop_->assertInLoopThread();
   }
 
  protected:
+  /**
+   * 定义通道映射为描述符到通道指针的映射
+   */
   typedef std::map<int, Channel*> ChannelMap;
+  /**
+   * 通道映射
+   */
   ChannelMap channels_;
 
  private:
+  /**
+   * 指向所属事件循环的指针
+   */
   EventLoop* ownerLoop_;
 };
 

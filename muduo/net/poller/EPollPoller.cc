@@ -30,11 +30,26 @@ static_assert(EPOLLHUP == POLLHUP,      "epoll uses same flag values as poll");
 
 namespace
 {
+/**
+ * 新的
+ */
 const int kNew = -1;
+/**
+ * 已添加
+ */
 const int kAdded = 1;
+/**
+ * 已删除
+ */
 const int kDeleted = 2;
 }
 
+/**
+ * 构造函数
+ *
+ * 创建e轮询描述符
+ * 并创建制定初始长度的事件列表
+ */
 EPollPoller::EPollPoller(EventLoop* loop)
   : Poller(loop),
     epollfd_(::epoll_create1(EPOLL_CLOEXEC)),
@@ -46,11 +61,25 @@ EPollPoller::EPollPoller(EventLoop* loop)
   }
 }
 
+/**
+ * 析构函数
+ *
+ * 关闭e轮询描述符
+ */
 EPollPoller::~EPollPoller()
 {
   ::close(epollfd_);
 }
 
+/**
+ * 轮询
+ *
+ * 调用epoll_wait等待，直到发现事件或者超时
+ * 记住当前时间和错误码
+ * 如果事件数量大于零则调用fillActiveChannels将事件填充到活跃的通道并判断事件数量是否等于事件列表大小，如果是则对其进行扩容
+ * 如果事件数量等于零则直接返回
+ * 如果事件数量小于零并且不是被系统调用中断则设置错误码
+ */
 Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels)
 {
   LOG_TRACE << "fd total count " << channels_.size();
@@ -85,6 +114,11 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels)
   return now;
 }
 
+/**
+ * 将事件填充到活跃的通道
+ *
+ * 循环遍历获取到的事件，根据事件找到对应的通道，给通道设置收到的事件，并将通道添加到活跃通道列表中
+ */
 void EPollPoller::fillActiveChannels(int numEvents,
                                      ChannelList* activeChannels) const
 {
@@ -103,6 +137,17 @@ void EPollPoller::fillActiveChannels(int numEvents,
   }
 }
 
+/**
+ * 更新通道
+ *
+ * 获取通道的状态，如果是新添加状态或已删除状态则开始下面的流程：
+ * 如果是新添加状态则将通道加入通道映射中，键是通道的描述符，值是通道的指针
+ * 将通道的状态设置为已添加，并将描述符添加到e轮询中
+ *
+ * 其他状态开始下面的流程：
+ * 判断通道是否什么事键都不允许，如果是则将其状态设置为已删除状态，并且将其描述符从e轮询中删除
+ * 否则将其描述符从e轮询中更改允许的事件
+ */
 void EPollPoller::updateChannel(Channel* channel)
 {
   Poller::assertInLoopThread();
@@ -147,6 +192,12 @@ void EPollPoller::updateChannel(Channel* channel)
   }
 }
 
+/**
+ * 删除通道
+ *
+ * 首先将通道从通道映射中删除，如果通道状态是已添加则将其描述符从e轮询中删除
+ * 将通道的状态设置为新添加
+ */
 void EPollPoller::removeChannel(Channel* channel)
 {
   Poller::assertInLoopThread();
@@ -168,6 +219,12 @@ void EPollPoller::removeChannel(Channel* channel)
   channel->set_index(kNew);
 }
 
+/**
+ * 在e轮询中更新通道的描述符
+ *
+ * 将通道允许的事件和通道的指针放置到事件结构体中
+ * 然后调用epoll_ctl更新通道的描述符在e轮询中的状态
+ */
 void EPollPoller::update(int operation, Channel* channel)
 {
   struct epoll_event event;
@@ -190,6 +247,9 @@ void EPollPoller::update(int operation, Channel* channel)
   }
 }
 
+/**
+ * 将操作码转换为字符串
+ */
 const char* EPollPoller::operationToString(int op)
 {
   switch (op)

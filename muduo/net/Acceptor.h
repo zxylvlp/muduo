@@ -30,25 +30,52 @@ class InetAddress;
 class Acceptor : noncopyable
 {
  public:
+  /**
+   * 定义新建连接回调函数类型
+   */
   typedef std::function<void (int sockfd, const InetAddress&)> NewConnectionCallback;
 
   Acceptor(EventLoop* loop, const InetAddress& listenAddr, bool reuseport);
   ~Acceptor();
 
+  /**
+   * 设置新建连接回调函数
+   */
   void setNewConnectionCallback(const NewConnectionCallback& cb)
   { newConnectionCallback_ = cb; }
 
+  /**
+   * 返回是否正在监听
+   */
   bool listenning() const { return listenning_; }
   void listen();
 
  private:
   void handleRead();
 
+  /**
+   * 指向事件循环的指针
+   */
   EventLoop* loop_;
+  /**
+   * 接受套接字
+   */
   Socket acceptSocket_;
+  /**
+   * 接受通道
+   */
   Channel acceptChannel_;
+  /**
+   * 新建连接回调
+   */
   NewConnectionCallback newConnectionCallback_;
+  /**
+   * 是否正在监听
+   */
   bool listenning_;
+  /**
+   * 闲置描述符
+   */
   int idleFd_;
 };
 

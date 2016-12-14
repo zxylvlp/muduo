@@ -19,6 +19,9 @@ namespace muduo
 namespace net
 {
 
+/**
+ * 样板类
+ */
 class BoilerPlate : noncopyable
 {
  public:

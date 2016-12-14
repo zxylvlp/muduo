@@ -39,12 +39,24 @@ namespace net
 /// |                   |                  |                  |
 /// 0      <=      readerIndex   <=   writerIndex    <=     size
 /// @endcode
+/**
+ * 缓冲类
+ */
 class Buffer : public muduo::copyable
 {
  public:
+  /**
+   * 在前追加预留大小
+   */
   static const size_t kCheapPrepend = 8;
+  /**
+   * 初始大小
+   */
   static const size_t kInitialSize = 1024;
 
+  /**
+   * 构造函数
+   */
   explicit Buffer(size_t initialSize = kInitialSize)
     : buffer_(kCheapPrepend + initialSize),
       readerIndex_(kCheapPrepend),
@@ -58,6 +70,11 @@ class Buffer : public muduo::copyable
   // implicit copy-ctor, move-ctor, dtor and assignment are fine
   // NOTE: implicit move-ctor is added in g++ 4.6
 
+  /**
+   * 交换
+   *
+   * 交换内部的内存容器，读者索引和写者索引
+   */
   void swap(Buffer& rhs)
   {
     buffer_.swap(rhs.buffer_);
@@ -65,18 +82,44 @@ class Buffer : public muduo::copyable
     std::swap(writerIndex_, rhs.writerIndex_);
   }
 
+  /**
+   * 可读字节数
+   *
+   * 返回写者索引减去读者索引
+   */
   size_t readableBytes() const
   { return writerIndex_ - readerIndex_; }
 
+  /**
+   * 可写字节数
+   *
+   * 返回内存容器大小减去写者所以呢
+   */
   size_t writableBytes() const
   { return buffer_.size() - writerIndex_; }
 
+  /**
+   * 在前可追加字节数
+   *
+   * 返回读者索引
+   */
   size_t prependableBytes() const
   { return readerIndex_; }
 
+  /**
+   * 偷看
+   *
+   * 返回指向容器读者位置的指针
+   */
   const char* peek() const
   { return begin() + readerIndex_; }
 
+  /**
+   * 找到换行
+   *
+   * 在容器可读区间中搜索换行符
+   * 如果找不到返回空，能找到则返回指向该换行符的指针
+   */
   const char* findCRLF() const
   {
     // FIXME: replace with memmem()?
@@ -84,6 +127,12 @@ class Buffer : public muduo::copyable
     return crlf == beginWrite() ? NULL : crlf;
   }
 
+  /**
+   * 从指定开始位置找到换行
+   *
+   * 在容器从指定开始位置之后的可读区间中搜索换行符
+   * 如果找不到返回空，能找到则返回指向该换行符的指针
+   */
   const char* findCRLF(const char* start) const
   {
     assert(peek() <= start);
@@ -93,12 +142,24 @@ class Buffer : public muduo::copyable
     return crlf == beginWrite() ? NULL : crlf;
   }
 
+  /**
+   * 找到换行符
+   *
+   * 在容器可读区间中搜索换行符
+   * 如果找不到返回空，能找到则返回指向该换行符的指针
+   */
   const char* findEOL() const
   {
     const void* eol = memchr(peek(), '\n', readableBytes());
     return static_cast<const char*>(eol);
   }
 
+  /**
+   * 从指定开始位置找到换行
+   *
+   * 在容器从指定开始位置之后的可读区间中搜索换行符
+   * 如果找不到返回空，能找到则返回指向该换行符的指针
+   */
   const char* findEOL(const char* start) const
   {
     assert(peek() <= start);
@@ -110,6 +171,12 @@ class Buffer : public muduo::copyable
   // retrieve returns void, to prevent
   // string str(retrieve(readableBytes()), readableBytes());
   // the evaluation of two functions are unspecified
+  /**
+   * 消耗指定长度
+   *
+   * 首先判断指定长度是否小于可读字节，如果是则将读者索引增加指定长度
+   * 否则调用retrieveAll消耗所有内容
+   */
   void retrieve(size_t len)
   {
     assert(len <= readableBytes());
@@ -123,6 +190,11 @@ class Buffer : public muduo::copyable
     }
   }
 
+  /**
+   * 消耗指针前面的内容
+   *
+   * 首先求得指针前面有多少字节，然后消耗掉这些字节
+   */
   void retrieveUntil(const char* end)
   {
     assert(peek() <= end);
@@ -130,37 +202,64 @@ class Buffer : public muduo::copyable
     retrieve(end - peek());
   }
 
+  /**
+   * 消耗8字节
+   */
   void retrieveInt64()
   {
     retrieve(sizeof(int64_t));
   }
 
+  /**
+   * 消耗4字节
+   */
   void retrieveInt32()
   {
     retrieve(sizeof(int32_t));
   }
 
+  /**
+   * 消耗2字节
+   */
   void retrieveInt16()
   {
     retrieve(sizeof(int16_t));
   }
 
+  /**
+   * 消耗1字节
+   */
   void retrieveInt8()
   {
     retrieve(sizeof(int8_t));
   }
 
+  /**
+   * 消耗所有内容
+   *
+   * 直接将读者索引和写者索引置为在前追加预留大小
+   */
   void retrieveAll()
   {
     readerIndex_ = kCheapPrepend;
     writerIndex_ = kCheapPrepend;
   }
 
+  /**
+   * 将所有内容拷贝到字符串中并消耗
+   * 利用可读字节数调用retrieveAsString拷贝并消耗
+   */
   string retrieveAllAsString()
   {
     return retrieveAsString(readableBytes());;
   }
 
+  /**
+   * 将指定长度的内容拷贝到字符串中并消耗
+   *
+   * 首先将指定长度的内容拷贝到字符串中并消耗
+   * 最后返回拷贝出的字符串
+   */
   string retrieveAsString(size_t len)
   {
     assert(len <= readableBytes());
@@ -169,6 +268,11 @@ class Buffer : public muduo::copyable
     return result;
   }
 
+  /**
+   * 到字符串片
+   *
+   * 将可读字节封装成字符串片并返回
+   */
   StringPiece toStringPiece() const
   {
     return StringPiece(peek(), static_cast<int>(readableBytes()));
@@ -409,8 +513,17 @@ class Buffer : public muduo::copyable
   }
 
  private:
+  /**
+   * 内存容器
+   */
   std::vector<char> buffer_;
+  /**
+   * 读者索引
+   */
   size_t readerIndex_;
+  /**
+   * 写者索引
+   */
   size_t writerIndex_;
 
   static const char kCRLF[];

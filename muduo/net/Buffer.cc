@@ -17,11 +17,23 @@
 using namespace muduo;
 using namespace muduo::net;
 
+/**
+ * 换行
+ */
 const char Buffer::kCRLF[] = "\r\n";
 
 const size_t Buffer::kCheapPrepend;
 const size_t Buffer::kInitialSize;
 
+/**
+ * 从指定描述符读取并且保存错误码
+ *
+ * 首先创建一个64k的栈上空间
+ * 然后利用分散读读到当前容器和栈上空间
+ * 如果可读字节数大于等于栈上空间则只读到当前容器，否则读到当前容器和栈上空间
+ * 如果读到的内容小于等于可写字节数则将写者位置向后移动n
+ * 否则将写者位置指向最后并将放到栈上的数据追加到当前容器后面
+ */
 ssize_t Buffer::readFd(int fd, int* savedErrno)
 {
   // saved an ioctl()/FIONREAD call to tell how much to read

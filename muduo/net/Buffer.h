@@ -278,11 +278,23 @@ class Buffer : public muduo::copyable
     return StringPiece(peek(), static_cast<int>(readableBytes()));
   }
 
+  /**
+   * 追加字符串片的内容
+   *
+   * 取出字符串片的头指针和长度，调用追加重载
+   */
   void append(const StringPiece& str)
   {
     append(str.data(), str.size());
   }
 
+  /**
+   * 追加指定长度的数据
+   *
+   * 将内存容器扩容至可写入指定长度
+   * 然后从写者位置将指定长度的数据拷贝到内存容器
+   * 最后将写者向后移动指定长度
+   */
   void append(const char* /*restrict*/ data, size_t len)
   {
     ensureWritableBytes(len);
@@ -290,11 +302,22 @@ class Buffer : public muduo::copyable
     hasWritten(len);
   }
 
+  /**
+   * 追加指定长度的数据
+   *
+   * 将指针转型之后调用追加重载
+   */
   void append(const void* /*restrict*/ data, size_t len)
   {
     append(static_cast<const char*>(data), len);
   }
 
+  /**
+   * 确保可写入指定长度
+   *
+   * 判断可写字节是否小于指定长度
+   * 如果是则对容器进行扩容
+   */
   void ensureWritableBytes(size_t len)
   {
     if (writableBytes() < len)
@@ -304,18 +327,34 @@ class Buffer : public muduo::copyable
     assert(writableBytes() >= len);
   }
 
+  /**
+   * 返回指向写者位置的指针
+   */
   char* beginWrite()
   { return begin() + writerIndex_; }
 
+  /**
+   * 返回指向写者位置的指针
+   */
   const char* beginWrite() const
   { return begin() + writerIndex_; }
 
+  /**
+   * 已经写了指定长度
+   *
+   * 将写者位置向后移动指定长度
+   */
   void hasWritten(size_t len)
   {
     assert(len <= writableBytes());
     writerIndex_ += len;
   }
 
+  /**
+   * 取消写指定长度
+   *
+   * 将写着位置向前移动指定长度
+   */
   void unwrite(size_t len)
   {
     assert(len <= readableBytes());
@@ -325,6 +364,11 @@ class Buffer : public muduo::copyable
   ///
   /// Append int64_t using network endian
   ///
+  /**
+   * 使用大端追加8字节整数
+   *
+   * 首先将小端整数转为大端整数，然后调用追加函数
+   */
   void appendInt64(int64_t x)
   {
     int64_t be64 = sockets::hostToNetwork64(x);
@@ -334,18 +378,33 @@ class Buffer : public muduo::copyable
   ///
   /// Append int32_t using network endian
   ///
+  /**
+   * 使用大端追加4字节整数
+   *
+   * 首先将小端整数转为大端整数，然后调用追加函数
+   */
   void appendInt32(int32_t x)
   {
     int32_t be32 = sockets::hostToNetwork32(x);
     append(&be32, sizeof be32);
   }
 
+  /**
+   * 使用大端追加2字节整数
+   *
+   * 首先将小端整数转为大端整数，然后调用追加函数
+   */
   void appendInt16(int16_t x)
   {
     int16_t be16 = sockets::hostToNetwork16(x);
     append(&be16, sizeof be16);
   }
 
+  /**
+   * 使用大端追加1字节整数
+   *
+   * 直接调用追加函数
+   */
   void appendInt8(int8_t x)
   {
     append(&x, sizeof x);
@@ -355,6 +414,11 @@ class Buffer : public muduo::copyable
   /// Read int64_t from network endian
   ///
   /// Require: buf->readableBytes() >= sizeof(int32_t)
+  /**
+   * 读取8字节整数
+   *
+   * 首先将8字节整数取出，然后将其消耗
+   */
   int64_t readInt64()
   {
     int64_t result = peekInt64();
@@ -366,6 +430,11 @@ class Buffer : public muduo::copyable
   /// Read int32_t from network endian
   ///
   /// Require: buf->readableBytes() >= sizeof(int32_t)
+  /**
+   * 读取4字节整数
+   *
+   * 首先将4字节整数取出，然后将其消耗
+   */
   int32_t readInt32()
   {
     int32_t result = peekInt32();
@@ -373,6 +442,11 @@ class Buffer : public muduo::copyable
     return result;
   }
 
+  /**
+   * 读取2字节整数
+   *
+   * 首先将2字节整数取出，然后将其消耗
+   */
   int16_t readInt16()
   {
     int16_t result = peekInt16();
@@ -380,6 +454,11 @@ class Buffer : public muduo::copyable
     return result;
   }
 
+  /**
+   * 读取1字节整数
+   *
+   * 首先将1字节整数取出，然后将其消耗
+   */
   int8_t readInt8()
   {
     int8_t result = peekInt8();
@@ -391,6 +470,11 @@ class Buffer : public muduo::copyable
   /// Peek int64_t from network endian
   ///
   /// Require: buf->readableBytes() >= sizeof(int64_t)
+  /**
+   * 取出8字节整数
+   *
+   * 首先从读者位置取出8个字节，然后将其从大端转换为小端
+   */
   int64_t peekInt64() const
   {
     assert(readableBytes() >= sizeof(int64_t));
@@ -403,6 +487,12 @@ class Buffer : public muduo::copyable
   /// Peek int32_t from network endian
   ///
   /// Require: buf->readableBytes() >= sizeof(int32_t)
+  /**
+   * 取出4字节整数
+   *
+   * 首先从读者位置取出4个字节，然后将其从大端转换为小端
+   *
+   */
   int32_t peekInt32() const
   {
     assert(readableBytes() >= sizeof(int32_t));
@@ -411,6 +501,12 @@ class Buffer : public muduo::copyable
     return sockets::networkToHost32(be32);
   }
 
+  /**
+   * 取出2字节整数
+   *
+   * 首先从读者位置取出2个字节，然后将其从大端转换为小端
+   *
+   */
   int16_t peekInt16() const
   {
     assert(readableBytes() >= sizeof(int16_t));
@@ -419,6 +515,12 @@ class Buffer : public muduo::copyable
     return sockets::networkToHost16(be16);
   }
 
+  /**
+   * 取出1字节整数
+   *
+   * 从读者位置取出1个字节并返回
+   *
+   */
   int8_t peekInt8() const
   {
     assert(readableBytes() >= sizeof(int8_t));
@@ -429,6 +531,11 @@ class Buffer : public muduo::copyable
   ///
   /// Prepend int64_t using network endian
   ///
+  /**
+   * 使用大端在前追加8字节整数
+   *
+   * 首先将整数从小端转为大端，然后调用在前追加函数
+   */
   void prependInt64(int64_t x)
   {
     int64_t be64 = sockets::hostToNetwork64(x);
@@ -438,23 +545,44 @@ class Buffer : public muduo::copyable
   ///
   /// Prepend int32_t using network endian
   ///
+  /**
+   * 使用大端在前追加4字节整数
+   *
+   * 首先将整数从小端转为大端，然后调用在前追加函数
+   */
   void prependInt32(int32_t x)
   {
     int32_t be32 = sockets::hostToNetwork32(x);
     prepend(&be32, sizeof be32);
   }
 
+  /**
+   * 使用大端在前追加2字节整数
+   *
+   * 首先将整数从小端转为大端，然后调用在前追加函数
+   */
   void prependInt16(int16_t x)
   {
     int16_t be16 = sockets::hostToNetwork16(x);
     prepend(&be16, sizeof be16);
   }
 
+  /**
+   * 使用大端在前追加1字节整数
+   *
+   * 直接调用在前追加函数
+   */
   void prependInt8(int8_t x)
   {
     prepend(&x, sizeof x);
   }
 
+  /**
+   * 在前追加指定长度的数据
+   *
+   * 首先将读者位置向前移动指定长度
+   * 然后将指定长度的数据拷贝到读者位置
+   */
   void prepend(const void* /*restrict*/ data, size_t len)
   {
     assert(len <= prependableBytes());
@@ -463,6 +591,14 @@ class Buffer : public muduo::copyable
     std::copy(d, d+len, begin()+readerIndex_);
   }
 
+  /**
+   * 收缩
+   *
+   * 首先创建一个新的缓冲器
+   * 并且确保其可写入当前可读字节数加上保留字节数
+   * 然后将当前缓冲器的可读内容拷贝到其中
+   * 最后交换本缓冲器和新缓冲器
+   */
   void shrink(size_t reserve)
   {
     // FIXME: use vector::shrink_to_fit() in C++ 11 if possible.
@@ -472,6 +608,11 @@ class Buffer : public muduo::copyable
     swap(other);
   }
 
+  /**
+   * 内部容量
+   *
+   * 返回内存容器的容量
+   */
   size_t internalCapacity() const
   {
     return buffer_.capacity();
@@ -485,12 +626,24 @@ class Buffer : public muduo::copyable
 
  private:
 
+  /**
+   * 返回指向容器起始位置的指针
+   */
   char* begin()
   { return &*buffer_.begin(); }
 
+  /**
+   * 返回指向容器起始位置的指针
+   */
   const char* begin() const
   { return &*buffer_.begin(); }
 
+  /**
+   * 制造指定长度的可写空间
+   *
+   * 如果可写长度加上可在前追加长度小于指定长度和加在前追加预留大小则将内容容器大小重置为写者位置加指定长度大小
+   * 否则将可读区间拷贝到在前追加预留大小之后，并且重置读者和写者位置
+   */
   void makeSpace(size_t len)
   {
     if (writableBytes() + prependableBytes() < len + kCheapPrepend)

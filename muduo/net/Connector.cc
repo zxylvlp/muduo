@@ -21,6 +21,9 @@ using namespace muduo::net;
 
 const int Connector::kMaxRetryDelayMs;
 
+/**
+ * 构造函数
+ */
 Connector::Connector(EventLoop* loop, const InetAddress& serverAddr)
   : loop_(loop),
     serverAddr_(serverAddr),
@@ -31,18 +34,32 @@ Connector::Connector(EventLoop* loop, const InetAddress& serverAddr)
   LOG_DEBUG << "ctor[" << this << "]";
 }
 
+/**
+ * 析构函数
+ */
 Connector::~Connector()
 {
   LOG_DEBUG << "dtor[" << this << "]";
   assert(!channel_);
 }
 
+/**
+ * 开始
+ *
+ * 首先将是否连接设置为真
+ * 然后在事件循环线程中开始
+ */
 void Connector::start()
 {
   connect_ = true;
   loop_->runInLoop(std::bind(&Connector::startInLoop, this)); // FIXME: unsafe
 }
 
+/**
+ * 在事件循环线程中开始
+ *
+ * 如果是否连接为真则调用连接函数进行连接
+ */
 void Connector::startInLoop()
 {
   loop_->assertInLoopThread();
@@ -57,6 +74,12 @@ void Connector::startInLoop()
   }
 }
 
+/**
+ * 停止
+ *
+ * 将是否连接设置为假
+ * 然后在事件循环线程中停止
+ */
 void Connector::stop()
 {
   connect_ = false;
@@ -64,6 +87,11 @@ void Connector::stop()
   // FIXME: cancel timer
 }
 
+/**
+ * 在事件循环线程中停止
+ *
+ * 如果状态为正在连接则将状态设置为已断开并且删除并重置通道，最后关闭描述符
+ */
 void Connector::stopInLoop()
 {
   loop_->assertInLoopThread();
@@ -75,6 +103,12 @@ void Connector::stopInLoop()
   }
 }
 
+/**
+ * 连接
+ *
+ * 首先创建一个非阻塞描述符，并且用该描述符连接服务器
+ * 然后根据返回码决定连接，重试还是关闭描述符
+ */
 void Connector::connect()
 {
   int sockfd = sockets::createNonblockingOrDie(serverAddr_.family());
@@ -116,6 +150,12 @@ void Connector::connect()
   }
 }
 
+/**
+ * 重启
+ *
+ * 将状态设置为已断开，将重试延迟时间设置为初始重试延迟时间，将是否连接设置为真
+ * 在事件循环线程中开始
+ */
 void Connector::restart()
 {
   loop_->assertInLoopThread();
@@ -125,6 +165,14 @@ void Connector::restart()
   startInLoop();
 }
 
+/**
+ * 连接过程
+ *
+ * 将状态设置为连接中
+ * 创建一个新的通道并设置到指向通道的唯一指针中
+ * 为通道设置写回调函数和出错回调函数为处理写和处理出错
+ * 允许通道的写
+ */
 void Connector::connecting(int sockfd)
 {
   setState(kConnecting);
@@ -140,6 +188,13 @@ void Connector::connecting(int sockfd)
   channel_->enableWriting();
 }
 
+/**
+ * 删除并且重置通道
+ *
+ * 取消通道的所有事件
+ * 然后将事件循环中将通道删除
+ * 在事件循环线程中调用重置通道函数
+ */
 int Connector::removeAndResetChannel()
 {
   channel_->disableAll();
@@ -150,11 +205,23 @@ int Connector::removeAndResetChannel()
   return sockfd;
 }
 
+/**
+ * 重置通道
+ *
+ * 将指向通道的指针重置为空
+ */
 void Connector::resetChannel()
 {
   channel_.reset();
 }
 
+/**
+ * 处理写
+ *
+ * 如果状态不为正在连接则直接返回
+ * 首先删除并且重置通道，根据拿到的描述符看看是否有错，如果有错则重试，如果是自连接则重试
+ * 否则将状态设置为已连接，如果是否连接为真则调用新建连接回调函数，否则将描述符关闭
+ */
 void Connector::handleWrite()
 {
   LOG_TRACE << "Connector::handleWrite " << state_;
@@ -194,6 +261,11 @@ void Connector::handleWrite()
   }
 }
 
+/**
+ * 处理出错
+ *
+ * 如果状态为正在连接则删除并且重置通道并且重试
+ */
 void Connector::handleError()
 {
   LOG_ERROR << "Connector::handleError state=" << state_;
@@ -206,6 +278,14 @@ void Connector::handleError()
   }
 }
 
+/**
+ * 重试
+ *
+ * 首先关闭描述符，将状态设置为已断开
+ * 如果是否连接为假则直接返回
+ * 在重试延迟时间后在事件循环中开始
+ * 然后更新重试延迟时间
+ */
 void Connector::retry(int sockfd)
 {
   sockets::close(sockfd);

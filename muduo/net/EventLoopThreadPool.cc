@@ -16,6 +16,9 @@
 using namespace muduo;
 using namespace muduo::net;
 
+/**
+ * 构造函数
+ */
 EventLoopThreadPool::EventLoopThreadPool(EventLoop* baseLoop, const string& nameArg)
   : baseLoop_(baseLoop),
     name_(nameArg),
@@ -25,11 +28,21 @@ EventLoopThreadPool::EventLoopThreadPool(EventLoop* baseLoop, const string& name
 {
 }
 
+/**
+ * 析构函数
+ */
 EventLoopThreadPool::~EventLoopThreadPool()
 {
   // Don't delete loop, it's stack variable
 }
 
+/**
+ * 开始
+ *
+ * 首先将是否开始设为真
+ * 然后根据线程数创建指定数量的事件循环线程，添加到事件循环线程指针数组中，将该事件循环线程开启，将事件循环指针添加到事件循环数组中
+ * 如果指定的线程数为0则利用基本事件循环指针调用线程初始化回调函数
+ */
 void EventLoopThreadPool::start(const ThreadInitCallback& cb)
 {
   assert(!started_);
@@ -51,6 +64,12 @@ void EventLoopThreadPool::start(const ThreadInitCallback& cb)
   }
 }
 
+/**
+ * 获取下一个事件循环
+ *
+ * 如果事件循环指针数组不为空，则找到下一个事件循环，并且将下一个位置移动一位，返回该事件循环
+ * 否则返回基本事件循环
+ */
 EventLoop* EventLoopThreadPool::getNextLoop()
 {
   baseLoop_->assertInLoopThread();
@@ -70,6 +89,12 @@ EventLoop* EventLoopThreadPool::getNextLoop()
   return loop;
 }
 
+/**
+ * 根据哈希值获取事件循环
+ *
+ * 如果事件循环指针数组不为空，则根据哈希值找到并且返回对应的事件循环
+ * 否则返回基本事件循环
+ */
 EventLoop* EventLoopThreadPool::getLoopForHash(size_t hashCode)
 {
   baseLoop_->assertInLoopThread();
@@ -82,6 +107,12 @@ EventLoop* EventLoopThreadPool::getLoopForHash(size_t hashCode)
   return loop;
 }
 
+/**
+ * 获取所有的事件循环
+ *
+ * 如果事件循环指针数组为空则将基本事件循环指针包装成数组返回
+ * 否则返回事件循环指针数组
+ */
 std::vector<EventLoop*> EventLoopThreadPool::getAllLoops()
 {
   baseLoop_->assertInLoopThread();

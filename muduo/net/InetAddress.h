@@ -29,6 +29,9 @@ const struct sockaddr* sockaddr_cast(const struct sockaddr_in6* addr);
 /// Wrapper of sockaddr_in.
 ///
 /// This is an POD interface class.
+/**
+ * 网络地址类
+ */
 class InetAddress : public muduo::copyable
 {
  public:
@@ -42,14 +45,23 @@ class InetAddress : public muduo::copyable
 
   /// Constructs an endpoint with given struct @c sockaddr_in
   /// Mostly used when accepting new connections
+  /**
+   * 构造函数
+   */
   explicit InetAddress(const struct sockaddr_in& addr)
     : addr_(addr)
   { }
 
+  /**
+   * 构造函数
+   */
   explicit InetAddress(const struct sockaddr_in6& addr)
     : addr6_(addr)
   { }
 
+  /**
+   * 返回协议族
+   */
   sa_family_t family() const { return addr_.sin_family; }
   string toIp() const;
   string toIpPort() const;
@@ -57,10 +69,19 @@ class InetAddress : public muduo::copyable
 
   // default copy/assignment are Okay
 
+  /**
+   * 返回地址
+   */
   const struct sockaddr* getSockAddr() const { return sockets::sockaddr_cast(&addr6_); }
+  /**
+   * 设置v6地址对象
+   */
   void setSockAddrInet6(const struct sockaddr_in6& addr6) { addr6_ = addr6; }
 
   uint32_t ipNetEndian() const;
+  /**
+   * 返回大端端口号
+   */
   uint16_t portNetEndian() const { return addr_.sin_port; }
 
   // resolve hostname to IP address, not changing port or sin_family
@@ -72,7 +93,13 @@ class InetAddress : public muduo::copyable
  private:
   union
   {
+	/**
+	 * 地址对象
+	 */
     struct sockaddr_in addr_;
+    /**
+     * v6地址对象
+     */
     struct sockaddr_in6 addr6_;
   };
 };

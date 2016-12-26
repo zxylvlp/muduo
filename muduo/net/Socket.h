@@ -31,9 +31,15 @@ class InetAddress;
 ///
 /// It closes the sockfd when desctructs.
 /// It's thread safe, all operations are delagated to OS.
+/**
+ * 套接字类
+ */
 class Socket : noncopyable
 {
  public:
+  /**
+   * 构造函数
+   */
   explicit Socket(int sockfd)
     : sockfd_(sockfd)
   { }
@@ -41,6 +47,9 @@ class Socket : noncopyable
   // Socket(Socket&&) // move constructor in C++11
   ~Socket();
 
+  /**
+   * 返回描述符
+   */
   int fd() const { return sockfd_; }
   // return true if success.
   bool getTcpInfo(struct tcp_info*) const;
@@ -80,6 +89,9 @@ class Socket : noncopyable
   void setKeepAlive(bool on);
 
  private:
+  /**
+   * 套接字的文件描述符
+   */
   const int sockfd_;
 };
 

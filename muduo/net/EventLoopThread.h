@@ -22,9 +22,15 @@ namespace net
 
 class EventLoop;
 
+/**
+ * 构造函数
+ */
 class EventLoopThread : noncopyable
 {
  public:
+  /**
+   * 线程初始化回调函数类型
+   */
   typedef std::function<void(EventLoop*)> ThreadInitCallback;
 
   EventLoopThread(const ThreadInitCallback& cb = ThreadInitCallback(),
@@ -35,11 +41,29 @@ class EventLoopThread : noncopyable
  private:
   void threadFunc();
 
+  /**
+   * 指向事件循环的指针
+   */
   EventLoop* loop_;
+  /**
+   * 是否正在退出
+   */
   bool exiting_;
+  /**
+   * 线程对象
+   */
   Thread thread_;
+  /**
+   * 互斥锁
+   */
   MutexLock mutex_;
+  /**
+   * 条件变量
+   */
   Condition cond_;
+  /**
+   * 线程初始化回调函数
+   */
   ThreadInitCallback callback_;
 };
 

@@ -18,7 +18,13 @@
 
 // INADDR_ANY use (type)value casting.
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+/**
+ * 定义任意地址
+ */
 static const in_addr_t kInaddrAny = INADDR_ANY;
+/**
+ * 定义回环地址
+ */
 static const in_addr_t kInaddrLoopback = INADDR_LOOPBACK;
 #pragma GCC diagnostic error "-Wold-style-cast"
 
@@ -56,6 +62,14 @@ static_assert(offsetof(sockaddr_in6, sin6_port) == 2, "sin6_port offset 2");
 #if !(__GNUC_PREREQ (4,6))
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #endif
+/**
+ * 构造函数
+ *
+ * 首先判断是否是v6如果是则初始化v6地址否则初始化普通地址
+ * 初始化过程中首先初始化协议族
+ * 然后判断只绑定回环地址，如果是则设置为回环地址，否则设置为任意地址
+ * 然后将端口编码为大端后设置好
+ */
 InetAddress::InetAddress(uint16_t port, bool loopbackOnly, bool ipv6)
 {
   static_assert(offsetof(InetAddress, addr6_) == 0, "addr6_ offset 0");
@@ -78,6 +92,12 @@ InetAddress::InetAddress(uint16_t port, bool loopbackOnly, bool ipv6)
   }
 }
 
+/**
+ * 构造函数
+ *
+ * 首先判断是否是v6，如果是则初始化v6地址，否则初始化普通地址
+ * 初始化过程调用sockets::fromIpPort实现
+ */
 InetAddress::InetAddress(StringArg ip, uint16_t port, bool ipv6)
 {
   if (ipv6)
@@ -92,6 +112,11 @@ InetAddress::InetAddress(StringArg ip, uint16_t port, bool ipv6)
   }
 }
 
+/**
+ * 将网络地址转换为地址和端口的字符串
+ *
+ * 首先获得网络地址然后调用sockets::toIpPort实现
+ */
 string InetAddress::toIpPort() const
 {
   char buf[64] = "";
@@ -99,6 +124,11 @@ string InetAddress::toIpPort() const
   return buf;
 }
 
+/**
+ * 将网络地址转换为地址字符串
+ *
+ * 首先获得网络地址然后调用sockets::toIp实现
+ */
 string InetAddress::toIp() const
 {
   char buf[64] = "";
@@ -106,19 +136,35 @@ string InetAddress::toIp() const
   return buf;
 }
 
+/**
+ * 返回大端网络地址
+ */
 uint32_t InetAddress::ipNetEndian() const
 {
   assert(family() == AF_INET);
   return addr_.sin_addr.s_addr;
 }
 
+/**
+ * 将网络地址转换为端口号
+ *
+ * 首先获得大端端口号然后将其转换为小端
+ */
 uint16_t InetAddress::toPort() const
 {
   return sockets::networkToHost16(portNetEndian());
 }
 
+/**
+ * 解析缓冲区
+ */
 static __thread char t_resolveBuffer[64 * 1024];
 
+/**
+ * 将域名转换为网络地址
+ *
+ * 调用gethostbyname_r实现
+ */
 bool InetAddress::resolve(StringArg hostname, InetAddress* out)
 {
   assert(out != NULL);

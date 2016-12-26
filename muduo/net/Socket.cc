@@ -20,11 +20,22 @@
 using namespace muduo;
 using namespace muduo::net;
 
+/**
+ * 析构函数
+ *
+ * 关闭描述符
+ */
 Socket::~Socket()
 {
   sockets::close(sockfd_);
 }
 
+/**
+ * 获得tcp信息
+ *
+ * 首先清空tcpi指向的内存
+ * 然后调用::getsockopt实现
+ */
 bool Socket::getTcpInfo(struct tcp_info* tcpi) const
 {
   socklen_t len = sizeof(*tcpi);
@@ -32,6 +43,13 @@ bool Socket::getTcpInfo(struct tcp_info* tcpi) const
   return ::getsockopt(sockfd_, SOL_TCP, TCP_INFO, tcpi, &len) == 0;
 }
 
+/**
+ * 获得tcp信息字符串
+ *
+ * 首先清空tcpi指向的内存
+ * 然后调用::getsockopt
+ * 最后将其转换为字符串
+ */
 bool Socket::getTcpInfoString(char* buf, int len) const
 {
   struct tcp_info tcpi;
@@ -58,16 +76,31 @@ bool Socket::getTcpInfoString(char* buf, int len) const
   return ok;
 }
 
+/**
+ * 绑定地址
+ *
+ * 调用sockets::bindOrDie实现
+ */
 void Socket::bindAddress(const InetAddress& addr)
 {
   sockets::bindOrDie(sockfd_, addr.getSockAddr());
 }
 
+/**
+ * 监听
+ *
+ * 调用sockets::listenOrDie实现
+ */
 void Socket::listen()
 {
   sockets::listenOrDie(sockfd_);
 }
 
+/**
+ * 接受
+ *
+ * 调用sockets::accept实现
+ */
 int Socket::accept(InetAddress* peeraddr)
 {
   struct sockaddr_in6 addr;
@@ -80,11 +113,21 @@ int Socket::accept(InetAddress* peeraddr)
   return connfd;
 }
 
+/**
+ * 关闭写
+ *
+ * 调用sockets::shutdownWrite实现
+ */
 void Socket::shutdownWrite()
 {
   sockets::shutdownWrite(sockfd_);
 }
 
+/**
+ * 设置tcp不延迟
+ *
+ * 调用::setsockopt实现
+ */
 void Socket::setTcpNoDelay(bool on)
 {
   int optval = on ? 1 : 0;
@@ -93,6 +136,11 @@ void Socket::setTcpNoDelay(bool on)
   // FIXME CHECK
 }
 
+/**
+ * 设置地址重用
+ *
+ * 调用::setsockopt实现
+ */
 void Socket::setReuseAddr(bool on)
 {
   int optval = on ? 1 : 0;
@@ -101,6 +149,11 @@ void Socket::setReuseAddr(bool on)
   // FIXME CHECK
 }
 
+/**
+ * 设置端口重用
+ *
+ * 调用::setsockopt实现实现
+ */
 void Socket::setReusePort(bool on)
 {
 #ifdef SO_REUSEPORT
@@ -119,6 +172,11 @@ void Socket::setReusePort(bool on)
 #endif
 }
 
+/**
+ * 设置保活
+ *
+ * 调用::setsockopt实现
+ */
 void Socket::setKeepAlive(bool on)
 {
   int optval = on ? 1 : 0;

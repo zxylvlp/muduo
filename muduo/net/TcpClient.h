@@ -20,8 +20,14 @@ namespace net
 {
 
 class Connector;
+/**
+ * 定义连接器的智能指针类型
+ */
 typedef std::shared_ptr<Connector> ConnectorPtr;
 
+/**
+ * tcp客户端类
+ */
 class TcpClient : noncopyable
 {
  public:
@@ -36,31 +42,57 @@ class TcpClient : noncopyable
   void disconnect();
   void stop();
 
+  /**
+   * 获取连接
+   *
+   * 在互斥锁保护下返回tcp连接的指针
+   */
   TcpConnectionPtr connection() const
   {
     MutexLockGuard lock(mutex_);
     return connection_;
   }
 
+  /**
+   * 返回指向事件循环的指针
+   */
   EventLoop* getLoop() const { return loop_; }
+  /**
+   * 返回是否可以重试
+   */
   bool retry() const { return retry_; }
+  /**
+   * 允许重试
+   */
   void enableRetry() { retry_ = true; }
 
+  /**
+   * 返回名字
+   */
   const string& name() const
   { return name_; }
 
   /// Set connection callback.
   /// Not thread safe.
+  /**
+   * 设置连接回调函数
+   */
   void setConnectionCallback(const ConnectionCallback& cb)
   { connectionCallback_ = cb; }
 
   /// Set message callback.
   /// Not thread safe.
+  /**
+   * 设置有消息回调函数
+   */
   void setMessageCallback(const MessageCallback& cb)
   { messageCallback_ = cb; }
 
   /// Set write complete callback.
   /// Not thread safe.
+  /**
+   * 设置写完成回调函数
+   */
   void setWriteCompleteCallback(const WriteCompleteCallback& cb)
   { writeCompleteCallback_ = cb; }
 
@@ -79,17 +111,50 @@ class TcpClient : noncopyable
   /// Not thread safe, but in loop
   void removeConnection(const TcpConnectionPtr& conn);
 
+  /**
+   * 指向事件循环的指针
+   */
   EventLoop* loop_;
+  /**
+   * 指向连接器的智能指针
+   */
   ConnectorPtr connector_; // avoid revealing Connector
+  /**
+   * 名字
+   */
   const string name_;
+  /**
+   * 连接回调函数
+   */
   ConnectionCallback connectionCallback_;
+  /**
+   * 有消息回调函数
+   */
   MessageCallback messageCallback_;
+  /**
+   * 写完成回调函数
+   */
   WriteCompleteCallback writeCompleteCallback_;
+  /**
+   * 是否重试
+   */
   bool retry_;   // atomic
+  /**
+   * 是否连接
+   */
   bool connect_; // atomic
   // always in loop thread
+  /**
+   * 下一个连接id
+   */
   int nextConnId_;
+  /**
+   * 互斥锁对象
+   */
   mutable MutexLock mutex_;
+  /**
+   * 指向tcp连接的智能指针
+   */
   TcpConnectionPtr connection_; // @GuardedBy mutex_
 };
 

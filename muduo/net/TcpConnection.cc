@@ -319,6 +319,13 @@ void TcpConnection::shutdownInLoop()
 //                        &TcpConnection::forceCloseInLoop));
 // }
 
+/**
+ * 强制关闭
+ *
+ * 判断状态是否为已连接或者正在关闭如果不是则直接返回
+ * 否则将状态设置为正在关闭
+ * 然后在事件循环中调用forceCloseInLoop函数
+ */
 void TcpConnection::forceClose()
 {
   // FIXME: use compare and swap
@@ -329,6 +336,13 @@ void TcpConnection::forceClose()
   }
 }
 
+/**
+ * 延迟几秒强制关闭
+ *
+ * 判断状态是否为已连接或者正在关闭如果不是则直接返回
+ * 否则将状态设置为正在关闭
+ * 延迟几秒后在事件循环线程调用强制关闭
+ */
 void TcpConnection::forceCloseWithDelay(double seconds)
 {
   if (state_ == kConnected || state_ == kDisconnecting)
@@ -341,6 +355,13 @@ void TcpConnection::forceCloseWithDelay(double seconds)
   }
 }
 
+/**
+ * 在事件循环线程中强制关闭
+ *
+ * 判断状态是否为已连接或者正在关闭如果不是则直接返回
+ * 否则将状态设置为正在关闭
+ * 调用处理关闭函数
+ */
 void TcpConnection::forceCloseInLoop()
 {
   loop_->assertInLoopThread();
@@ -351,6 +372,9 @@ void TcpConnection::forceCloseInLoop()
   }
 }
 
+/**
+ * 将状态转换为字符串
+ */
 const char* TcpConnection::stateToString() const
 {
   switch (state_)
@@ -368,16 +392,29 @@ const char* TcpConnection::stateToString() const
   }
 }
 
+/**
+ * 设置tcp不延迟
+ */
 void TcpConnection::setTcpNoDelay(bool on)
 {
   socket_->setTcpNoDelay(on);
 }
 
+/**
+ * 开始读
+ *
+ * 在事件循环线程中开始读
+ */
 void TcpConnection::startRead()
 {
   loop_->runInLoop(std::bind(&TcpConnection::startReadInLoop, this));
 }
 
+/**
+ * 在事件循环线程中开始读
+ *
+ * 如果不是正在读或通道没有允许读则允许通道读并且将正在读设置为真
+ */
 void TcpConnection::startReadInLoop()
 {
   loop_->assertInLoopThread();
@@ -388,11 +425,21 @@ void TcpConnection::startReadInLoop()
   }
 }
 
+/**
+ * 停止读
+ *
+ * 在事件循环线程中停止读
+ */
 void TcpConnection::stopRead()
 {
   loop_->runInLoop(std::bind(&TcpConnection::stopReadInLoop, this));
 }
 
+/**
+ * 在事件循环线程中停止读
+ *
+ * 如果正在读或者通道允许读则不允许通道读并且将正在读设置为假
+ */
 void TcpConnection::stopReadInLoop()
 {
   loop_->assertInLoopThread();
@@ -403,6 +450,13 @@ void TcpConnection::stopReadInLoop()
   }
 }
 
+/**
+ * 连接建立
+ *
+ * 将状态设置为已连接
+ * 并将当前对象绑到通道上
+ * 允许通道的读并调用连接回调
+ */
 void TcpConnection::connectEstablished()
 {
   loop_->assertInLoopThread();
@@ -414,6 +468,15 @@ void TcpConnection::connectEstablished()
   connectionCallback_(shared_from_this());
 }
 
+/**
+ * 连接销毁
+ *
+ * 如果状态为已连接则进行以下操作：
+ * 设置状态为已断开并关闭通道的任何事件
+ * 调用连接回调
+ *
+ * 最后调用通道的删除函数
+ */
 void TcpConnection::connectDestroyed()
 {
   loop_->assertInLoopThread();
@@ -427,6 +490,14 @@ void TcpConnection::connectDestroyed()
   channel_->remove();
 }
 
+/**
+ * 处理读
+ *
+ * 读取描述符内容到输入缓冲区
+ * 如果长度大于0则调用消息回调
+ * 如果长度等于0则调用处理关闭
+ * 否则调用处理出错
+ */
 void TcpConnection::handleRead(Timestamp receiveTime)
 {
   loop_->assertInLoopThread();
@@ -448,6 +519,16 @@ void TcpConnection::handleRead(Timestamp receiveTime)
   }
 }
 
+/**
+ * 处理写
+ *
+ * 如果通道不允许写则直接返回
+ * 将输出缓冲区的内容写入描述符
+ * 如果写入长度不大于0则直接返回
+ * 如果输出缓冲器还有要写的内容则直接返回
+ * 否则关闭通道写事件，在事件循环中调用写完成回调函数
+ * 如果状态为断开中调用关闭函数
+ */
 void TcpConnection::handleWrite()
 {
   loop_->assertInLoopThread();
@@ -488,6 +569,13 @@ void TcpConnection::handleWrite()
   }
 }
 
+/**
+ * 处理关闭
+ *
+ * 将状态设置为已关闭
+ * 禁止通道的所有事件
+ * 调用连接回调和关闭回调
+ */
 void TcpConnection::handleClose()
 {
   loop_->assertInLoopThread();
@@ -503,6 +591,11 @@ void TcpConnection::handleClose()
   closeCallback_(guardThis);
 }
 
+/**
+ * 处理出错
+ *
+ * 获取并打印错误码
+ */
 void TcpConnection::handleError()
 {
   int err = sockets::getSocketError(channel_->fd());
